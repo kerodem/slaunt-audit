@@ -61,7 +61,7 @@ async function connectAndList(
   server: ServerConfig,
   transport: StdioClientTransport | StreamableHTTPClientTransport | SSEClientTransport,
 ): Promise<DeclaredTool[]> {
-  const client = new Client({ name: 'slaunt-audit', version: '0.1.1' }, { capabilities: {} });
+  const client = new Client({ name: 'slaunt-audit', version: '0.1.2' }, { capabilities: {} });
   try {
     // The SDK's transport classes declare `sessionId?: string` while its shared
     // Transport interface is emitted without exact-optional compatibility.
@@ -88,6 +88,14 @@ async function withTimeout<T>(operation: Promise<T>, milliseconds: number, onTim
 
 async function probeServer(server: ServerConfig, allowServerStarts: boolean, timeoutMs: number): Promise<ServerProbe> {
   if (server.transport === 'stdio') {
+    if (isRecursiveSlauntLauncher(server)) {
+      return {
+        serverId: server.id,
+        status: 'skipped',
+        tools: [],
+        message: 'Skipped a Slaunt CLI launcher to prevent a recursive audit',
+      };
+    }
     if (!allowServerStarts) {
       return { serverId: server.id, status: 'skipped', tools: [], message: 'Local server start was not approved' };
     }
@@ -169,4 +177,18 @@ export async function probeServers(servers: ServerConfig[], options: ProbeOption
 export function isDynamicLauncher(server: ServerConfig): boolean {
   const command = server.command ? basename(server.command).toLowerCase() : '';
   return ['npx', 'uvx', 'docker', 'podman', 'bunx', 'pnpx'].includes(command);
+}
+
+export function isRecursiveSlauntLauncher(server: ServerConfig): boolean {
+  const command = server.command ? basename(server.command).toLowerCase() : '';
+  if (/^slaunt(?:\.cmd|\.exe)?$/.test(command)) return true;
+
+  if (['npx', 'bunx', 'pnpx'].includes(command)) {
+    return server.args.some((argument) => /^slaunt(?:@[^/\s]+)?$/i.test(argument));
+  }
+
+  return server.args.some((argument) => {
+    const normalized = argument.replaceAll('\\', '/');
+    return /(?:^|\/)slaunt(?:-audit)?(?:\/.*)?\/(?:dist\/)?cli\.(?:c?js|mjs)$/i.test(normalized);
+  });
 }

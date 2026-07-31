@@ -1,6 +1,6 @@
 {
   "name": "slaunt",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Privacy-first MCP agent access auditor for Claude and Codex",
   "type": "module",
   "bin": {
@@ -16,7 +16,7 @@
     "check": "tsc --noEmit",
     "test": "npm run build && vitest run",
     "test:watch": "vitest",
-    "audit:demo": "npm run build && node dist/cli.js audit --demo --no-open --no-install-slaunt",
+    "audit:demo": "npm run build && node dist/cli.js audit --demo",
     "prepublishOnly": "npm run check && npm test"
   },
   "engines": {

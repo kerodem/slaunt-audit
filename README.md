@@ -25,7 +25,7 @@ The default architecture is intentionally local-first:
 - If Supabase is configured, the CLI downloads approved classification rules and performs matching locally. It does not upload an audit payload or call a classification RPC.
 - MCP tools are never called. The auditor only performs the MCP initialization handshake and `tools/list`.
 - Starting configured stdio servers requires interactive consent, or the explicit `--allow-server-starts` flag.
-- Editing client configuration requires interactive consent, or the explicit `--install-slaunt` flag. Existing files are backed up first.
+- The default audit never edits client configuration or opens another window. Slaunt MCP installation requires `--install-slaunt`, and report opening requires `--open-report`.
 - JSON output is redacted. Environment and header values are never included.
 
 ## Run
@@ -42,14 +42,14 @@ Useful modes:
 # Configuration-only inventory; never starts a local MCP process
 npx slaunt audit --no-server-starts
 
-# Non-interactive audit with explicit consent to safe defaults
-npx slaunt audit --yes --no-open
+# Non-interactive audit with explicit consent to read declared tool lists
+npx slaunt audit --yes
 
 # Redacted machine-readable output
 npx slaunt audit --json --no-report --no-install-slaunt --no-server-starts
 
 # Deterministic product demonstration
-npx slaunt audit --demo --no-open --no-install-slaunt
+npx slaunt audit --demo
 
 # Skip deliberate interactive pacing while keeping the full audit
 npx slaunt audit --no-motion
@@ -71,9 +71,9 @@ The scanner supports stdio, Streamable HTTP, and legacy SSE server declarations.
 
 ## Secure Slaunt MCP installation
 
-The interactive audit can add Slaunt MCP to each detected client. Installation is:
+The audit can add Slaunt MCP to each detected client only when `--install-slaunt` is supplied. Installation is:
 
-- consented and optional;
+- explicit and optional;
 - idempotent by the reserved server name `slaunt`;
 - atomic, using a same-directory temporary file and rename;
 - backed up with a timestamp before any existing file changes;
@@ -133,9 +133,11 @@ Database patterns are treated as bounded globs, never executable regular express
 
 ## Terminal experience and conversion ethics
 
-The terminal flow uses immediate collection feedback followed by a short, deliberately paced analysis trail. It visibly indexes the retrieved tools, builds the client-to-capability graph, searches direct privilege paths, tests cross-server chains, ranks the resulting evidence, and only then reveals the report. Every completed line is derived from the actual audit result; the pacing never invents a server, tool, capability, or finding.
+The terminal flow uses immediate collection feedback followed by a short, deliberately paced analysis trail. A single updating line indexes the retrieved tools, searches direct and chained privilege paths, compares client permissions, and ranks the evidence before revealing the report. Every state is derived from the actual audit result; the pacing never invents a server, tool, capability, or finding.
 
-The trail runs only in an interactive terminal. JSON output, piped output, CI, `--yes`, `--no-motion`, and `SLAUNT_NO_MOTION=1` remain immediate. The experience deliberately avoids variable rewards, deceptive urgency, hidden defaults, shame, or an unsupported claim that a UI can medically “optimize dopamine.”
+The default view is intentionally concise: a posture summary, the three highest-priority findings, a compact client access map, and the unclassified-tool queue. Supporting findings and complete evidence remain in the local HTML report. The CLI writes that report without opening it; use `--open-report` when you explicitly want a browser window.
+
+The trail runs only in an interactive terminal. JSON output, piped output, CI, `--yes`, `--no-motion`, and `SLAUNT_NO_MOTION=1` remain immediate. The audit also refuses to start a configured stdio entry that resolves back to the `slaunt` CLI, preventing recursive audit windows. The experience deliberately avoids variable rewards, deceptive urgency, hidden defaults, shame, or an unsupported claim that a UI can medically “optimize dopamine.”
 
 The design is informed by evidence that progress feedback can improve follow-through, autonomy-supportive framing is associated with more self-directed motivation, and risk messages work better when paired with an effective action. See the PubMed-indexed reviews on [progress feedback](https://pubmed.ncbi.nlm.nih.gov/33721605/), [autonomy support](https://pubmed.ncbi.nlm.nih.gov/30237648/), and [fear appeals with efficacy](https://pubmed.ncbi.nlm.nih.gov/26501228/). These findings come from other domains, so their application to developer security tooling is a product hypothesis, not a medical claim.
 

@@ -33,56 +33,32 @@ export function buildAnalysisPath(result: AuditResult): AnalysisBeat[] {
 
   return [
     {
-      active: `Indexing ${summary.tools} declared tools across detected clients`,
+      active: `Indexing ${summary.tools} tools from ${summary.servers} MCP servers`,
       complete: `Indexed ${summary.tools} ${plural(summary.tools, 'tool')} from ${summary.servers} MCP ${plural(summary.servers, 'server')}`,
-      delayMs: 360,
+      delayMs: 380,
       tone: 'success',
     },
     {
-      active: 'Building the client → server → capability graph',
-      complete: `Mapped ${summary.sensitiveCapabilities} sensitive ${plural(summary.sensitiveCapabilities, 'capability', 'capabilities')} across ${summary.clientsDetected} ${plural(summary.clientsDetected, 'client')}`,
-      delayMs: 440,
-      tone: 'success',
+      active: 'Searching direct and chained privilege paths',
+      complete: `${criticalPaths} direct · ${crossServerChains} chained`,
+      delayMs: 680,
+      tone: criticalPaths + crossServerChains > 0 ? 'warning' : 'success',
     },
     {
-      active: 'Searching for direct production-changing access',
-      complete: criticalPaths > 0
-        ? `${criticalPaths} critical direct-access ${plural(criticalPaths, 'path')} found`
-        : 'No critical direct-access paths found',
-      delayMs: 540,
-      tone: criticalPaths > 0 ? 'warning' : 'success',
-    },
-    {
-      active: 'Testing whether permissions can be chained across servers',
-      complete: crossServerChains > 0
-        ? `${crossServerChains} cross-server capability ${plural(crossServerChains, 'chain')} found`
-        : 'No cross-server capability chains found',
-      delayMs: 620,
-      tone: crossServerChains > 0 ? 'warning' : 'success',
-    },
-    {
-      active: 'Comparing permission overlap between agent clients',
+      active: `Comparing permissions across ${summary.clientsDetected} agent clients`,
       complete: sharedPermissionFindings > 0
         ? `Permission overlap contributes to ${sharedPermissionFindings} ${plural(sharedPermissionFindings, 'finding')}`
         : 'No risky permission overlap found',
-      delayMs: 460,
+      delayMs: 520,
       tone: sharedPermissionFindings > 0 ? 'warning' : 'success',
     },
     {
-      active: 'Checking classification confidence and unknown tools',
-      complete: summary.unclassified > 0
-        ? `${summary.unclassified} ${plural(summary.unclassified, 'tool')} need human classification`
-        : 'Every retrieved tool has a recognized classification',
-      delayMs: 400,
-      tone: summary.unclassified > 0 ? 'warning' : 'success',
-    },
-    {
-      active: 'Ranking evidence by exploitability and blast radius',
+      active: 'Prioritizing findings by exploitability and blast radius',
       complete: summary.highRiskFindings > 0
-        ? `${summary.highRiskFindings} high-risk ${plural(summary.highRiskFindings, 'finding')} prioritized for review`
-        : 'No high-risk findings to prioritize',
-      delayMs: 500,
-      tone: summary.highRiskFindings > 0 ? 'warning' : 'success',
+        ? `${summary.highRiskFindings} high-risk · ${summary.unclassified} unclassified`
+        : `${summary.unclassified} unclassified · no high-risk findings`,
+      delayMs: 490,
+      tone: summary.highRiskFindings + summary.unclassified > 0 ? 'warning' : 'success',
     },
   ];
 }
@@ -92,19 +68,20 @@ export async function playAnalysisPath(
   options: PlayAnalysisPathOptions = {},
 ): Promise<void> {
   const sleep = options.sleep || wait;
-  process.stdout.write(`\n${chalk.bold('Tracing exposure paths')}\n`);
+  const beats = buildAnalysisPath(result);
+  const first = beats[0];
+  if (!first) return;
+  const spinner = ora({
+    color: 'magenta',
+    spinner: 'dots12',
+    text: first.active,
+  }).start();
 
-  for (const beat of buildAnalysisPath(result)) {
-    const spinner = ora({
-      color: 'magenta',
-      spinner: 'dots12',
-      text: beat.active,
-    }).start();
+  for (const beat of beats) {
+    spinner.text = beat.active;
     await sleep(beat.delayMs);
-    if (beat.tone === 'warning') spinner.warn(beat.complete);
-    else spinner.succeed(beat.complete);
   }
-
-  process.stdout.write(`${chalk.gray('Evidence graph complete. Preparing the risk map…')}\n`);
-  await sleep(220);
+  spinner.succeed(
+    `${chalk.bold('Analysis complete')} ${chalk.gray('·')} ${result.summary.highRiskFindings} high-risk ${chalk.gray('·')} ${result.summary.unclassified} unclassified`,
+  );
 }

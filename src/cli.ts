@@ -18,7 +18,7 @@ interface CliOptions {
   demo: boolean;
   json: boolean;
   offline: boolean;
-  noOpen: boolean;
+  openReport: boolean;
   noMotion: boolean;
   noReport: boolean;
   output?: string;
@@ -34,19 +34,18 @@ Usage:
   npx slaunt audit [options]
 
 Options:
-  --install-slaunt          Add Slaunt MCP to detected Claude/Codex user configs
-  --no-install-slaunt       Do not offer to add Slaunt MCP
+  --install-slaunt          Explicitly add Slaunt MCP to detected client configs
   --allow-server-starts     Start configured stdio servers to request tools/list
   --no-server-starts        Inspect configuration only; do not start local servers
   --config <path>           Inspect an additional JSON or TOML MCP config (repeatable)
   --offline                 Use the bundled catalog; do not refresh from Supabase
   --output <path>           HTML report path
   --no-report               Do not write the local HTML report
-  --no-open                 Do not offer to open the HTML report
+  --open-report             Open the local HTML report after the audit
   --no-motion               Skip the paced interactive analysis trail
   --timeout <ms>            Per-server probe timeout (1000-60000; default 8000)
   --json                    Print a machine-readable, redacted JSON result
-  --yes                     Accept safe interactive defaults for automation
+  --yes                     Approve read-only tools/list startup for automation
   --demo                    Render a deterministic 43-tool example audit
   -h, --help                Show help
   -v, --version             Show version
@@ -64,7 +63,7 @@ function valueAfter(args: string[], index: number, option: string): string {
 
 function parseArguments(args: string[]): CliOptions {
   const options: CliOptions = {
-    customPaths: [], demo: false, json: false, offline: false, noOpen: false, noMotion: false, noReport: false, yes: false,
+    customPaths: [], demo: false, json: false, offline: false, openReport: false, noMotion: false, noReport: false, yes: false,
   };
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
@@ -72,7 +71,8 @@ function parseArguments(args: string[]): CliOptions {
     if (argument === '--demo') options.demo = true;
     else if (argument === '--json') options.json = true;
     else if (argument === '--offline') options.offline = true;
-    else if (argument === '--no-open') options.noOpen = true;
+    else if (argument === '--open-report') options.openReport = true;
+    else if (argument === '--no-open') options.openReport = false;
     else if (argument === '--no-motion') options.noMotion = true;
     else if (argument === '--no-report') options.noReport = true;
     else if (argument === '--yes' || argument === '-y') options.yes = true;
@@ -90,7 +90,7 @@ function parseArguments(args: string[]): CliOptions {
       process.stdout.write(HELP);
       process.exit(0);
     } else if (argument === '--version' || argument === '-v') {
-      process.stdout.write('0.1.1\n');
+      process.stdout.write('0.1.2\n');
       process.exit(0);
     } else if (argument === 'connect') {
       throw new Error('connect is intentionally not implemented in this audit-only release');
@@ -129,7 +129,7 @@ async function main(): Promise<void> {
     && !process.env.CI
     && process.env.SLAUNT_NO_MOTION !== '1';
 
-  if (!options.json) process.stdout.write(`${renderHeader()}\n\n${chalk.gray('Tool and configuration data stays on this machine. No audit payload uploaded.')}\n\n`);
+  if (!options.json) process.stdout.write(`${renderHeader()}\n\n`);
 
   let discovery = options.demo ? undefined : await discoverConfigurations({
     ...(options.customPaths.length ? { customPaths: options.customPaths } : {}),
@@ -137,13 +137,7 @@ async function main(): Promise<void> {
 
   const detectedClients = discovery?.clients.filter((client) => client.detected).map((client) => client.id) || [];
   const clientsMissingSlaunt = detectedClients.filter((client) => !discovery?.servers.some((server) => server.client === client && server.name.toLowerCase() === 'slaunt'));
-  let shouldInstall = options.installSlaunt ?? (options.yes && !options.demo);
-  if (interactive && options.installSlaunt === undefined && clientsMissingSlaunt.length > 0 && !options.demo) {
-    shouldInstall = await confirm({
-      message: `Add Slaunt MCP to ${clientsMissingSlaunt.length} detected client configuration${clientsMissingSlaunt.length === 1 ? '' : 's'}? Backups are created first.`,
-      default: true,
-    });
-  }
+  const shouldInstall = options.installSlaunt === true && !options.demo;
   if (shouldInstall && clientsMissingSlaunt.length > 0) {
     const changes = await installSlauntMcp({ clients: clientsMissingSlaunt as ClientId[] });
     if (!options.json) installationSummary(changes);
@@ -184,12 +178,7 @@ async function main(): Promise<void> {
   }
 
   process.stdout.write(`${renderAudit(result)}\n`);
-  if (result.reportPath) process.stdout.write(`\n${chalk.gray('Full local report:')}\n${result.reportPath}\n`);
-
-  if (interactive && result.reportPath && !options.noOpen) {
-    const shouldOpen = await confirm({ message: 'Open report now?', default: true });
-    if (shouldOpen) await open(result.reportPath, { wait: false });
-  }
+  if (options.openReport && result.reportPath) await open(result.reportPath, { wait: false });
 }
 
 main().catch((error: unknown) => {

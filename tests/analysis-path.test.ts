@@ -8,25 +8,19 @@ describe('interactive analysis path', () => {
     const beats = buildAnalysisPath(result);
 
     expect(beats.map((beat) => beat.active)).toEqual([
-      'Indexing 43 declared tools across detected clients',
-      'Building the client → server → capability graph',
-      'Searching for direct production-changing access',
-      'Testing whether permissions can be chained across servers',
-      'Comparing permission overlap between agent clients',
-      'Checking classification confidence and unknown tools',
-      'Ranking evidence by exploitability and blast radius',
+      'Indexing 43 tools from 5 MCP servers',
+      'Searching direct and chained privilege paths',
+      'Comparing permissions across 2 agent clients',
+      'Prioritizing findings by exploitability and blast radius',
     ]);
     expect(beats.map((beat) => beat.complete)).toEqual([
       'Indexed 43 tools from 5 MCP servers',
-      'Mapped 31 sensitive capabilities across 2 clients',
-      '1 critical direct-access path found',
-      '1 cross-server capability chain found',
+      '1 direct · 1 chained',
       'Permission overlap contributes to 2 findings',
-      '5 tools need human classification',
-      '3 high-risk findings prioritized for review',
+      '3 high-risk · 5 unclassified',
     ]);
     expect(beats.map((beat) => beat.tone)).toEqual([
-      'success', 'success', 'warning', 'warning', 'warning', 'warning', 'warning',
+      'success', 'warning', 'warning', 'warning',
     ]);
   });
 });
