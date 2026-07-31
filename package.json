@@ -1,0 +1,56 @@
+{
+  "name": "slaunt",
+  "version": "0.1.0",
+  "description": "Privacy-first MCP agent access auditor for Claude and Codex",
+  "type": "module",
+  "bin": {
+    "slaunt": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc --noEmit",
+    "test": "npm run build && vitest run",
+    "test:watch": "vitest",
+    "audit:demo": "npm run build && node dist/cli.js audit --demo --no-open --no-install-slaunt",
+    "prepublishOnly": "npm run check && npm test"
+  },
+  "engines": {
+    "node": ">=20.17.0"
+  },
+  "keywords": [
+    "mcp",
+    "security",
+    "audit",
+    "claude",
+    "codex",
+    "agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kerodem/slaunt-audit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kerodem/slaunt-audit/issues"
+  },
+  "homepage": "https://github.com/kerodem/slaunt-audit#readme",
+  "license": "MIT",
+  "dependencies": {
+    "@inquirer/prompts": "8.5.2",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "chalk": "6.0.0",
+    "open": "11.0.0",
+    "ora": "9.4.1",
+    "smol-toml": "1.7.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}

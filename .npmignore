@@ -1,0 +1,7 @@
+src/
+tests/
+supabase/
+docs/
+tsconfig*.json
+vitest.config.ts
+.github/
