@@ -10,7 +10,7 @@ import { discoverConfigurations } from './config/discover.js';
 import { installSlauntMcp } from './config/install.js';
 import { isDynamicLauncher } from './mcp/introspect.js';
 import { writeHtmlReport } from './report/html.js';
-import { playAnalysisPath } from './tui/analysis-path.js';
+import { DEFAULT_INSPECTION_WINDOW_MS, playAnalysisPath } from './tui/analysis-path.js';
 import { renderAudit, renderHeader } from './tui/render.js';
 
 interface CliOptions {
@@ -42,7 +42,7 @@ Options:
   --output <path>           HTML report path
   --no-report               Do not write the local HTML report
   --open-report             Open the local HTML report after the audit
-  --no-motion               Skip the paced interactive analysis trail
+  --quick, --no-motion      Skip the guided 1-2 minute inspection sequence
   --timeout <ms>            Per-server probe timeout (1000-60000; default 8000)
   --json                    Print a machine-readable, redacted JSON result
   --yes                     Approve read-only tools/list startup for automation
@@ -73,7 +73,7 @@ function parseArguments(args: string[]): CliOptions {
     else if (argument === '--offline') options.offline = true;
     else if (argument === '--open-report') options.openReport = true;
     else if (argument === '--no-open') options.openReport = false;
-    else if (argument === '--no-motion') options.noMotion = true;
+    else if (argument === '--no-motion' || argument === '--quick') options.noMotion = true;
     else if (argument === '--no-report') options.noReport = true;
     else if (argument === '--yes' || argument === '-y') options.yes = true;
     else if (argument === '--install-slaunt') options.installSlaunt = true;
@@ -90,7 +90,7 @@ function parseArguments(args: string[]): CliOptions {
       process.stdout.write(HELP);
       process.exit(0);
     } else if (argument === '--version' || argument === '-v') {
-      process.stdout.write('0.1.2\n');
+      process.stdout.write('0.1.3\n');
       process.exit(0);
     } else if (argument === 'connect') {
       throw new Error('connect is intentionally not implemented in this audit-only release');
@@ -122,6 +122,7 @@ async function main(): Promise<void> {
     throw new Error(`Unknown command: ${rawArgs[0]}`);
   }
   const options = parseArguments(rawArgs);
+  const inspectionStartedAt = Date.now();
   const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY && !options.json);
   const motionEnabled = interactive
     && !options.noMotion
@@ -165,7 +166,12 @@ async function main(): Promise<void> {
     onStage: (_stage, detail) => { if (spinner) spinner.text = detail; },
   });
   spinner?.succeed('Evidence collected');
-  if (motionEnabled) await playAnalysisPath(result);
+  if (motionEnabled) {
+    const elapsedMs = Date.now() - inspectionStartedAt;
+    await playAnalysisPath(result, {
+      durationMs: Math.max(4_200, DEFAULT_INSPECTION_WINDOW_MS - elapsedMs),
+    });
+  }
 
   if (!options.noReport) {
     const reportPath = await writeHtmlReport(result, options.output);
