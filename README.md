@@ -50,6 +50,9 @@ npx slaunt audit --json --no-report --no-install-slaunt --no-server-starts
 
 # Deterministic product demonstration
 npx slaunt audit --demo --no-open --no-install-slaunt
+
+# Skip deliberate interactive pacing while keeping the full audit
+npx slaunt audit --no-motion
 ```
 
 Run `npx slaunt audit --help` for every option.
@@ -130,7 +133,9 @@ Database patterns are treated as bounded globs, never executable regular express
 
 ## Terminal experience and conversion ethics
 
-The terminal flow uses immediate progress feedback, a completed security map, concrete remediations, and an optional next step. It deliberately avoids variable rewards, deceptive urgency, hidden defaults, shame, or an unsupported claim that a UI can medically “optimize dopamine.”
+The terminal flow uses immediate collection feedback followed by a short, deliberately paced analysis trail. It visibly indexes the retrieved tools, builds the client-to-capability graph, searches direct privilege paths, tests cross-server chains, ranks the resulting evidence, and only then reveals the report. Every completed line is derived from the actual audit result; the pacing never invents a server, tool, capability, or finding.
+
+The trail runs only in an interactive terminal. JSON output, piped output, CI, `--yes`, `--no-motion`, and `SLAUNT_NO_MOTION=1` remain immediate. The experience deliberately avoids variable rewards, deceptive urgency, hidden defaults, shame, or an unsupported claim that a UI can medically “optimize dopamine.”
 
 The design is informed by evidence that progress feedback can improve follow-through, autonomy-supportive framing is associated with more self-directed motivation, and risk messages work better when paired with an effective action. See the PubMed-indexed reviews on [progress feedback](https://pubmed.ncbi.nlm.nih.gov/33721605/), [autonomy support](https://pubmed.ncbi.nlm.nih.gov/30237648/), and [fear appeals with efficacy](https://pubmed.ncbi.nlm.nih.gov/26501228/). These findings come from other domains, so their application to developer security tooling is a product hypothesis, not a medical claim.
 

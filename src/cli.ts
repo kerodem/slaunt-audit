@@ -10,6 +10,7 @@ import { discoverConfigurations } from './config/discover.js';
 import { installSlauntMcp } from './config/install.js';
 import { isDynamicLauncher } from './mcp/introspect.js';
 import { writeHtmlReport } from './report/html.js';
+import { playAnalysisPath } from './tui/analysis-path.js';
 import { renderAudit, renderHeader } from './tui/render.js';
 
 interface CliOptions {
@@ -18,6 +19,7 @@ interface CliOptions {
   json: boolean;
   offline: boolean;
   noOpen: boolean;
+  noMotion: boolean;
   noReport: boolean;
   output?: string;
   timeoutMs?: number;
@@ -41,6 +43,7 @@ Options:
   --output <path>           HTML report path
   --no-report               Do not write the local HTML report
   --no-open                 Do not offer to open the HTML report
+  --no-motion               Skip the paced interactive analysis trail
   --timeout <ms>            Per-server probe timeout (1000-60000; default 8000)
   --json                    Print a machine-readable, redacted JSON result
   --yes                     Accept safe interactive defaults for automation
@@ -61,7 +64,7 @@ function valueAfter(args: string[], index: number, option: string): string {
 
 function parseArguments(args: string[]): CliOptions {
   const options: CliOptions = {
-    customPaths: [], demo: false, json: false, offline: false, noOpen: false, noReport: false, yes: false,
+    customPaths: [], demo: false, json: false, offline: false, noOpen: false, noMotion: false, noReport: false, yes: false,
   };
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
@@ -70,6 +73,7 @@ function parseArguments(args: string[]): CliOptions {
     else if (argument === '--json') options.json = true;
     else if (argument === '--offline') options.offline = true;
     else if (argument === '--no-open') options.noOpen = true;
+    else if (argument === '--no-motion') options.noMotion = true;
     else if (argument === '--no-report') options.noReport = true;
     else if (argument === '--yes' || argument === '-y') options.yes = true;
     else if (argument === '--install-slaunt') options.installSlaunt = true;
@@ -86,7 +90,7 @@ function parseArguments(args: string[]): CliOptions {
       process.stdout.write(HELP);
       process.exit(0);
     } else if (argument === '--version' || argument === '-v') {
-      process.stdout.write('0.1.0\n');
+      process.stdout.write('0.1.1\n');
       process.exit(0);
     } else if (argument === 'connect') {
       throw new Error('connect is intentionally not implemented in this audit-only release');
@@ -119,6 +123,11 @@ async function main(): Promise<void> {
   }
   const options = parseArguments(rawArgs);
   const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY && !options.json);
+  const motionEnabled = interactive
+    && !options.noMotion
+    && !options.yes
+    && !process.env.CI
+    && process.env.SLAUNT_NO_MOTION !== '1';
 
   if (!options.json) process.stdout.write(`${renderHeader()}\n\n${chalk.gray('Tool and configuration data stays on this machine. No audit payload uploaded.')}\n\n`);
 
@@ -161,7 +170,8 @@ async function main(): Promise<void> {
     ...(discovery ? { discovery } : {}),
     onStage: (_stage, detail) => { if (spinner) spinner.text = detail; },
   });
-  spinner?.succeed('Audit complete');
+  spinner?.succeed('Evidence collected');
+  if (motionEnabled) await playAnalysisPath(result);
 
   if (!options.noReport) {
     const reportPath = await writeHtmlReport(result, options.output);

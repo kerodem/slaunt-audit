@@ -5,6 +5,13 @@ import { describe, expect, it } from 'vitest';
 const execFileAsync = promisify(execFile);
 
 describe('built CLI', () => {
+  it('reports the current package version', async () => {
+    const { stdout } = await execFileAsync(process.execPath, ['dist/cli.js', '--version'], {
+      cwd: process.cwd(), timeout: 10_000,
+    });
+    expect(stdout.trim()).toBe('0.1.1');
+  });
+
   it('returns a redacted deterministic JSON audit', async () => {
     const { stdout } = await execFileAsync(process.execPath, [
       'dist/cli.js', 'audit', '--demo', '--json', '--no-report', '--no-install-slaunt', '--no-server-starts',

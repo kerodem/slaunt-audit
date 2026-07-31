@@ -61,7 +61,7 @@ async function connectAndList(
   server: ServerConfig,
   transport: StdioClientTransport | StreamableHTTPClientTransport | SSEClientTransport,
 ): Promise<DeclaredTool[]> {
-  const client = new Client({ name: 'slaunt-audit', version: '0.1.0' }, { capabilities: {} });
+  const client = new Client({ name: 'slaunt-audit', version: '0.1.1' }, { capabilities: {} });
   try {
     // The SDK's transport classes declare `sessionId?: string` while its shared
     // Transport interface is emitted without exact-optional compatibility.
