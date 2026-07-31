@@ -39,6 +39,11 @@ describe('privacy boundary and report', () => {
     expect(html).not.toContain('src="http');
     expect(html).toContain('admin.execute');
     expect(html.toLowerCase()).toContain('no audit payload was uploaded');
+    expect(html).toContain('See what your AI assistants can do.');
+    expect(html).toContain('Why this matters:');
+    expect(html).toContain('What you can do:');
+    expect(html).not.toContain('Agent access, mapped.');
+    expect(html).not.toContain('<small>posture</small>');
   });
 
   it('refuses to overwrite an explicitly named report', async () => {

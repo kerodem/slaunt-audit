@@ -75,96 +75,96 @@ export function buildAnalysisPath(result: AuditResult): AnalysisBeat[] {
 
   return [
     {
-      active: 'Mapping Claude and Codex configuration boundaries',
-      complete: `${summary.clientsDetected} ${plural(summary.clientsDetected, 'client')} · ${configSources} configuration ${plural(configSources, 'source')}`,
+      active: 'Finding Claude and Codex settings on this computer',
+      complete: `${summary.clientsDetected} AI ${plural(summary.clientsDetected, 'assistant')} found in ${configSources} settings ${plural(configSources, 'file')}`,
       delayMs: 4_800,
       tone: 'success',
     },
     {
-      active: 'Normalizing MCP server identities and transports',
-      complete: `${summary.servers} unique ${plural(summary.servers, 'server')} · ${transportKinds} transport ${plural(transportKinds, 'type')}`,
+      active: 'Listing the services each assistant can reach',
+      complete: `${summary.servers} connected ${plural(summary.servers, 'service')} · ${transportKinds} connection ${plural(transportKinds, 'type')}`,
       delayMs: 5_400,
       tone: 'success',
     },
     {
-      active: 'Verifying declared tool inventories without invoking tools',
-      complete: `${successfulInventories} inventories available · ${unavailableInventories} unavailable`,
+      active: 'Checking what each connected service allows',
+      complete: `${successfulInventories} permission ${plural(successfulInventories, 'list')} available · ${unavailableInventories} unavailable`,
       delayMs: 5_200,
       tone: unavailableInventories > 0 ? 'warning' : 'success',
     },
     {
-      active: `Fingerprinting ${summary.tools} tool names, descriptions, and schemas`,
-      complete: `${summary.tools} tool signatures indexed · ${schemaBackedTools} include schemas`,
+      active: `Reading the names and descriptions of ${summary.tools} available actions`,
+      complete: `${summary.tools} ${plural(summary.tools, 'action')} reviewed · ${schemaBackedTools} include usage details`,
       delayMs: 5_200,
       tone: 'success',
     },
     {
-      active: 'Semantically matching tool intent against trusted classifications',
-      complete: `${summary.classified} recognized · ${summary.unclassified} held for review · ${confidence}% coverage`,
+      active: 'Matching each action to the kind of access it provides',
+      complete: `${summary.classified} understood · ${summary.unclassified} need a closer look · ${confidence}% covered`,
       delayMs: 6_000,
       tone: summary.unclassified > 0 ? 'warning' : 'success',
     },
     {
-      active: 'Mapping sensitive capabilities to their owning servers',
-      complete: `${summary.sensitiveCapabilities} sensitive ${plural(summary.sensitiveCapabilities, 'tool')} across ${sensitiveServers} server bindings`,
+      active: 'Finding access to sensitive information and important changes',
+      complete: `${summary.sensitiveCapabilities} sensitive ${plural(summary.sensitiveCapabilities, 'action')} across ${sensitiveServers} service connections`,
       delayMs: 5_200,
       tone: summary.sensitiveCapabilities > 0 ? 'warning' : 'success',
     },
     {
-      active: 'Tracing state-changing write, execution, and deployment surfaces',
-      complete: `${stateChangingTools} state-changing ${plural(stateChangingTools, 'tool')} exposed`,
+      active: 'Checking which actions can change data or run commands',
+      complete: `${stateChangingTools} ${plural(stateChangingTools, 'action')} can make changes`,
       delayMs: 5_800,
       tone: stateChangingTools > 0 ? 'warning' : 'success',
     },
     {
-      active: 'Checking for direct production and administrative authority',
+      active: 'Looking for direct access to live systems or administrator controls',
       complete: criticalPaths > 0
-        ? `${criticalPaths} critical direct ${plural(criticalPaths, 'path')} found`
-        : 'No critical direct authority found',
+        ? `${criticalPaths} urgent ${plural(criticalPaths, 'issue')} found`
+        : 'No urgent direct access found',
       delayMs: 5_000,
       tone: criticalPaths > 0 ? 'warning' : 'success',
     },
     {
-      active: 'Testing credential access against command-execution reachability',
+      active: 'Checking whether credentials and command access can be combined',
       complete: secretExecutionChains > 0
-        ? `${secretExecutionChains} credential-to-execution ${plural(secretExecutionChains, 'chain')} found`
-        : 'No credential-to-execution chain found',
+        ? `${secretExecutionChains} risky ${plural(secretExecutionChains, 'combination')} found`
+        : 'Credentials and command access are kept separate',
       delayMs: 6_200,
       tone: secretExecutionChains > 0 ? 'warning' : 'success',
     },
     {
-      active: 'Searching cross-server paths that amplify agent authority',
+      active: 'Looking for permissions that become riskier when combined',
       complete: crossServerChains > 0
-        ? `${crossServerChains} cross-server ${plural(crossServerChains, 'path')} contributes to risk`
-        : 'No cross-server amplification path found',
+        ? `${crossServerChains} risky ${plural(crossServerChains, 'combination')} across connected services`
+        : 'No risky combinations found across services',
       delayMs: 6_400,
       tone: crossServerChains > 0 ? 'warning' : 'success',
     },
     {
-      active: `Comparing permissions across ${summary.clientsDetected} agent clients`,
+      active: `Comparing what each of the ${summary.clientsDetected} AI assistants can do`,
       complete: sharedPermissionFindings > 0
-        ? `${sharedPermissionFindings} shared-permission ${plural(sharedPermissionFindings, 'finding')}`
-        : 'No risky permission overlap found',
+        ? `${sharedPermissionFindings} ${plural(sharedPermissionFindings, 'case')} of shared powerful access`
+        : 'The assistants do not share risky access',
       delayMs: 5_200,
       tone: sharedPermissionFindings > 0 ? 'warning' : 'success',
     },
     {
-      active: 'Testing least-privilege separation between agent roles',
-      complete: `${clientsWithSensitiveAccess} ${plural(clientsWithSensitiveAccess, 'client')} hold sensitive access`,
+      active: 'Checking whether each assistant has only the access it needs',
+      complete: `${clientsWithSensitiveAccess} AI ${plural(clientsWithSensitiveAccess, 'assistant')} have sensitive access`,
       delayMs: 5_400,
       tone: clientsWithSensitiveAccess > 1 ? 'warning' : 'success',
     },
     {
-      active: 'Isolating ambiguous tools for conservative review',
-      complete: `${summary.unclassified} unknown · ${suspiciousUnknowns} appear state-changing`,
+      active: 'Setting aside unfamiliar actions for a person to review',
+      complete: `${summary.unclassified} unfamiliar · ${suspiciousUnknowns} may make changes`,
       delayMs: 4_400,
       tone: summary.unclassified > 0 ? 'warning' : 'success',
     },
     {
-      active: 'Ranking exploitability, blast radius, and classification confidence',
+      active: 'Putting the most urgent issues first',
       complete: postureAvailable
-        ? `${summary.highRiskFindings} high-risk · posture ${summary.postureScore}/100 · coverage ${confidence}%`
-        : 'Posture unavailable · no tool definitions retrieved',
+        ? `${summary.highRiskFindings} urgent ${plural(summary.highRiskFindings, 'issue')} · safety score ${summary.postureScore}/100 · ${confidence}% understood`
+        : 'Safety score unavailable · no action lists could be read',
       delayMs: 7_800,
       tone: !postureAvailable || summary.highRiskFindings + summary.unclassified > 0 ? 'warning' : 'success',
     },
@@ -206,6 +206,6 @@ export async function playAnalysisPath(
     remainingMs = Math.max(0, remainingMs - evidenceDuration);
   }
   spinner.succeed(
-    `${chalk.bold('Inspection complete')} ${chalk.gray('·')} ${result.summary.highRiskFindings} high-risk ${chalk.gray('·')} ${result.summary.unclassified} unclassified`,
+    `${chalk.bold('Safety check complete')} ${chalk.gray('·')} ${result.summary.highRiskFindings} urgent ${plural(result.summary.highRiskFindings, 'issue')} ${chalk.gray('·')} ${result.summary.unclassified} need review`,
   );
 }
