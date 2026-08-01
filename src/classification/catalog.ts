@@ -4,6 +4,9 @@ import { dirname, join, resolve } from 'node:path';
 import { z } from 'zod';
 import type { Capability, ClassificationRule } from '../types.js';
 import { BUILTIN_CATALOG } from './builtin-catalog.js';
+import { PUBLIC_CATALOG_KEY, PUBLIC_CATALOG_URL } from './public-catalog-config.js';
+
+const MAX_CATALOG_BYTES = 2 * 1024 * 1024;
 
 const capabilities = [
   'read-data', 'write-data', 'read-files', 'write-files', 'delete-data', 'execute-code',
@@ -87,11 +90,65 @@ function validatedSupabaseUrl(raw: string): URL {
   return url;
 }
 
+function legacyJwtRole(key: string): string | undefined {
+  if (key.split('.').length !== 3) return undefined;
+  try {
+    const payload = JSON.parse(Buffer.from(key.split('.')[1] || '', 'base64url').toString('utf8')) as unknown;
+    if (!payload || typeof payload !== 'object' || !('role' in payload)) return undefined;
+    return typeof payload.role === 'string' ? payload.role : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function validatedPublicKey(raw: string): { key: string; legacyJwt: boolean } {
+  const key = raw.trim();
+  if (!key || key.length > 2_048 || /[\r\n]/u.test(key)) throw new Error('Supabase publishable key is malformed');
+  if (key.startsWith('sb_secret_')) throw new Error('Refusing to use a Supabase secret key in the public audit client');
+  if (key.startsWith('sb_') && !key.startsWith('sb_publishable_')) {
+    throw new Error('Supabase catalog requires a publishable key');
+  }
+
+  const role = legacyJwtRole(key);
+  if (key.split('.').length === 3 && role !== 'anon') {
+    throw new Error('Supabase catalog accepts only a legacy anon JWT, never a service-role or user token');
+  }
+  if (!key.startsWith('sb_publishable_') && role !== 'anon') {
+    throw new Error('Supabase catalog requires a publishable key');
+  }
+  return { key, legacyJwt: role === 'anon' };
+}
+
+async function readBoundedBody(response: Response): Promise<string> {
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_CATALOG_BYTES) {
+    throw new Error('catalog response exceeded 2 MiB');
+  }
+  if (!response.body) return '';
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > MAX_CATALOG_BYTES) {
+      await reader.cancel();
+      throw new Error('catalog response exceeded 2 MiB');
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks, received).toString('utf8');
+}
+
 async function fetchDatabaseRules(): Promise<z.infer<typeof databaseRowSchema>[]> {
-  const rawUrl = process.env.SLAUNT_SUPABASE_URL;
-  const key = process.env.SLAUNT_SUPABASE_PUBLISHABLE_KEY || process.env.SLAUNT_SUPABASE_ANON_KEY;
-  if (!rawUrl || !key) throw new Error('Supabase catalog is not configured');
+  const rawUrl = process.env.SLAUNT_SUPABASE_URL || PUBLIC_CATALOG_URL;
+  const candidateKey = process.env.SLAUNT_SUPABASE_PUBLISHABLE_KEY
+    || process.env.SLAUNT_SUPABASE_ANON_KEY
+    || PUBLIC_CATALOG_KEY;
   const base = validatedSupabaseUrl(rawUrl);
+  const { key, legacyJwt } = validatedPublicKey(candidateKey);
   const endpoint = new URL('/rest/v1/tool_classification_catalog', base);
   endpoint.searchParams.set('select', 'id,namespace,tool_pattern,description_terms,category,capabilities,risk_score,risk_level,sensitive,verified,rationale,priority');
   endpoint.searchParams.set('active', 'eq.true');
@@ -102,11 +159,10 @@ async function fetchDatabaseRules(): Promise<z.infer<typeof databaseRowSchema>[]
   const timeout = setTimeout(() => controller.abort(), 5_000);
   try {
     const headers: Record<string, string> = { apikey: key, accept: 'application/json' };
-    if (key.split('.').length === 3) headers.authorization = `Bearer ${key}`;
+    if (legacyJwt) headers.authorization = `Bearer ${key}`;
     const response = await fetch(endpoint, { headers, signal: controller.signal, redirect: 'error' });
     if (!response.ok) throw new Error(`catalog request returned HTTP ${response.status}`);
-    const body = await response.text();
-    if (body.length > 2 * 1024 * 1024) throw new Error('catalog response exceeded 2 MiB');
+    const body = await readBoundedBody(response);
     return z.array(databaseRowSchema).max(10_000).parse(JSON.parse(body));
   } finally {
     clearTimeout(timeout);
@@ -120,7 +176,7 @@ export interface CatalogResult {
 }
 
 export async function loadCatalog(options: { offline?: boolean } = {}): Promise<CatalogResult> {
-  if (!options.offline && process.env.SLAUNT_SUPABASE_URL) {
+  if (!options.offline) {
     try {
       const rows = await fetchDatabaseRules();
       await writeCache(rows).catch(() => undefined);

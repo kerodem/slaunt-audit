@@ -91,7 +91,7 @@ function parseArguments(args: string[]): CliOptions {
       process.stdout.write(HELP);
       process.exit(0);
     } else if (argument === '--version' || argument === '-v') {
-      process.stdout.write('0.1.6\n');
+      process.stdout.write('0.1.7\n');
       process.exit(0);
     } else if (argument === 'connect') {
       throw new Error('connect is intentionally not implemented in this audit-only release');
