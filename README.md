@@ -1,4 +1,4 @@
-# Slaunt Agent Access Audit
+# slaunt audit
 
 See what Claude and Codex can do through their configured MCP servers.
 
@@ -45,7 +45,7 @@ npx slaunt audit --offline
 npx slaunt audit --json --no-report --no-server-starts
 ```
 
-Run `npx slaunt audit --help` for all options. Node.js 20.17 or newer is required.
+run `npx slaunt audit --help` for all options. ** Node.js 20.17 or newer is required.**
 
 ## Privacy and consent
 
