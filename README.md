@@ -45,7 +45,7 @@ npx slaunt audit --offline
 npx slaunt audit --json --no-report --no-server-starts
 ```
 
-run `npx slaunt audit --help` for all options. ** Node.js 20.17 or newer is required.**
+run `npx slaunt audit --help` for all options. **Node.js 20.17 or newer is required.**
 
 ## Privacy and consent
 
