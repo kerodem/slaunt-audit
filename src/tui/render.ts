@@ -52,7 +52,7 @@ function section(title: string): string[] {
 }
 
 function scoreLabel(score: number): { color: (value: string) => string; label: string } {
-  if (score >= 80) return { color: chalk.green, label: 'Looks good' };
+  if (score >= 80) return { color: chalk.green, label: 'Strong' };
   if (score >= 55) return { color: chalk.yellow, label: 'Review recommended' };
   return { color: chalk.red, label: 'Needs attention' };
 }
@@ -60,11 +60,11 @@ function scoreLabel(score: number): { color: (value: string) => string; label: s
 function postureLine(result: AuditResult, unavailable: number): string {
   const { summary } = result;
   if (summary.tools === 0 && unavailable > 0) {
-    return `${chalk.yellow.bold('Safety score unavailable')} ${chalk.gray('· some services could not be fully checked')}`;
+    return `${chalk.yellow.bold('Security posture unavailable')} ${chalk.gray('· tool inventories are incomplete')}`;
   }
   const score = scoreLabel(summary.postureScore);
-  const suffix = unavailable > 0 ? 'Some services could not be fully checked' : score.label;
-  return `${score.color(chalk.bold(`${summary.postureScore}/100 safety score`))} ${chalk.gray(`· ${suffix}`)}`;
+  const suffix = unavailable > 0 ? 'Partial tool coverage' : score.label;
+  return `${score.color(chalk.bold(`${summary.postureScore}/100 security posture`))} ${chalk.gray(`· ${suffix}`)}`;
 }
 
 function naturalList(values: string[]): string {
@@ -79,15 +79,19 @@ function findingLines(item: Finding): string[] {
   const copy = plainFinding(item);
   const assistants = naturalList(item.clients.map(plainClient));
   const services = naturalList(item.serverNames);
-  const where = [assistants, services].filter(Boolean).join(' → ');
-  const actionLabel = item.toolNames.length === 1 ? 'Action name' : 'Action names';
+  const clientLabel = item.clients.length === 1 ? 'Agent client' : 'Agent clients';
+  const serverLabel = item.serverNames.length === 1 ? 'MCP server' : 'MCP servers';
+  const toolLabel = item.toolNames.length === 1 ? 'Tool' : 'Tools';
+  const capabilityLabel = item.access.length === 1 ? 'Capability' : 'Capabilities';
   return [
     '',
     ...wrap(`${icon} ${copy.label.toUpperCase()}  ${copy.title}`),
-    ...(where ? wrap(`Where: ${where}`, '  ').map((line) => chalk.gray(line)) : []),
-    ...(item.toolNames.length ? wrap(`${actionLabel}: ${item.toolNames.join(', ')}`, '  ').map((line) => chalk.gray(line)) : []),
+    ...(assistants ? wrap(`${clientLabel}: ${assistants}`, '  ').map((line) => chalk.gray(line)) : []),
+    ...(services ? wrap(`${serverLabel}: ${services}`, '  ').map((line) => chalk.gray(line)) : []),
+    ...(item.toolNames.length ? wrap(`${toolLabel}: ${item.toolNames.join(', ')}`, '  ').map((line) => chalk.gray(line)) : []),
+    ...(item.access.length ? wrap(`${capabilityLabel}: ${item.access.join(', ')}`, '  ').map((line) => chalk.gray(line)) : []),
     ...wrap(`Why this matters: ${copy.why}`, '  '),
-    ...wrap(`What you can do: ${copy.recommendation}`, '  ').map((line) => color(line)),
+    ...wrap(`Recommended control: ${copy.recommendation}`, '  ').map((line) => color(line)),
   ];
 }
 
@@ -96,7 +100,7 @@ function shortCapabilities(capabilities: Capability[]): string {
   const labels = capabilityPriority
     .filter((capability) => set.has(capability))
     .map(plainCapability);
-  return [...new Set(labels)].slice(0, 3).join(', ') || 'Permissions could not be read';
+  return [...new Set(labels)].slice(0, 3).join(', ') || 'Tool inventory unavailable';
 }
 
 function accessLines(result: AuditResult): string[] {
@@ -110,7 +114,7 @@ function accessLines(result: AuditResult): string[] {
       .filter((item) => item.client === client.id)
       .sort((left, right) => highestRisk(right.id) - highestRisk(left.id));
     if (servers.length === 0) {
-      lines.push(chalk.gray('  No connected services found'));
+      lines.push(chalk.gray('  No enabled MCP servers'));
       continue;
     }
     for (const server of servers.slice(0, 6)) {
@@ -120,7 +124,7 @@ function accessLines(result: AuditResult): string[] {
       const name = server.name.slice(0, 14).padEnd(14);
       lines.push(`  ${chalk.hex('#a78bfa')(name)}${shortCapabilities(capabilities)}`);
     }
-    if (servers.length > 6) lines.push(chalk.gray(`  + ${servers.length - 6} more in the detailed report`));
+    if (servers.length > 6) lines.push(chalk.gray(`  + ${servers.length - 6} more in the full report`));
   }
   return lines;
 }
@@ -138,64 +142,66 @@ export function renderAudit(result: AuditResult): string {
   const failedProbes = result.probes.filter((probe) => probe.status !== 'ok');
   const lines: string[] = [
     '',
-    chalk.bold('Safety check complete'),
+    chalk.bold('Audit complete'),
     postureLine(result, failedProbes.length),
     '',
-    `${chalk.bold(String(summary.clientsDetected))} AI ${plural(summary.clientsDetected, 'assistant')} checked  ${chalk.gray('·')}  ${chalk.bold(String(summary.servers))} connected ${plural(summary.servers, 'service')}`,
-    `${chalk.bold(String(summary.tools))} available ${plural(summary.tools, 'action')} reviewed`,
-    `${chalk.bold(String(summary.sensitiveCapabilities))} can access sensitive information or make changes  ${chalk.gray('·')}  ${chalk.bold(String(summary.unclassified))} need a closer look`,
-    ...section('What needs your attention'),
+    `${chalk.bold(String(summary.clientsDetected))} agent ${plural(summary.clientsDetected, 'client')}  ${chalk.gray('·')}  ${chalk.bold(String(summary.servers))} MCP ${plural(summary.servers, 'server')}  ${chalk.gray('·')}  ${chalk.bold(String(summary.tools))} ${plural(summary.tools, 'tool')}`,
+    `${chalk.bold(String(summary.sensitiveCapabilities))} sensitive ${plural(summary.sensitiveCapabilities, 'tool')}  ${chalk.gray('·')}  ${chalk.bold(String(summary.unclassified))} unclassified ${plural(summary.unclassified, 'tool')}`,
+    ...wrap('Agent clients are the AI applications being audited. MCP servers expose tools those agents can use.').map((line) => chalk.gray(line)),
+    ...section('High-priority findings'),
   ];
 
   if (priority.length) {
     for (const finding of priority.slice(0, 3)) lines.push(...findingLines(finding));
   } else if (failedProbes.length > 0) {
-    lines.push('', chalk.yellow('No urgent issues were found in the permissions Slaunt could read.'), chalk.gray('Some services could not be checked, so this result is incomplete.'));
+    lines.push('', chalk.yellow('No critical or high-risk paths were found in the retrieved tool inventories.'), chalk.gray('Missing inventories prevent a complete assessment.'));
   } else {
-    lines.push('', chalk.green('✓ No urgent or high-priority access issues found.'));
+    lines.push('', chalk.green('✓ No critical or high-risk access paths found.'));
   }
 
   if (otherFindings > 0) {
-    lines.push('', chalk.gray(`${otherFindings} lower-priority ${plural(otherFindings, 'item')} saved in the detailed report.`));
+    lines.push('', chalk.gray(`${otherFindings} additional ${plural(otherFindings, 'finding')} included in the full report.`));
   }
 
-  lines.push(...section('What each assistant can do'), ...accessLines(result));
+  lines.push(...section('Access overview'), ...accessLines(result));
+  lines.push('', ...wrap('Capabilities describe what each MCP server allows an agent to do. The three most sensitive capabilities are shown per server.').map((line) => chalk.gray(line)));
 
   if (unknown.length) {
     const visibleUnknown = unknown.slice(0, 8);
     lines.push(
-      ...section(`Items Slaunt could not identify (${unknown.length})`),
+      ...section(`Unclassified tools (${unknown.length})`),
       '',
       ...wrap(visibleUnknown.map((tool) => tool.name).join('  ·  '), '  '),
       ...(unknown.length > visibleUnknown.length
-        ? [chalk.gray(`  + ${unknown.length - visibleUnknown.length} more in the detailed report`)]
+        ? [chalk.gray(`  + ${unknown.length - visibleUnknown.length} more in the full report`)]
         : []),
-      ...wrap('These action names are not in Slaunt\'s reviewed guide yet. Until a person checks them, Slaunt treats them as possibly sensitive.', '  ').map((line) => chalk.gray(line)),
+      ...wrap('Unclassified means no reviewed catalog rule matched the tool. Slaunt treats it as potentially sensitive until a person reviews it.', '  ').map((line) => chalk.gray(line)),
     );
   }
 
   if (failedProbes.length) {
-    lines.push(...section(`Services that could not be fully checked (${failedProbes.length})`));
+    lines.push(...section(`Tool inventories unavailable (${failedProbes.length})`));
+    lines.push(...wrap('A tool inventory is the list of tools an MCP server reports through tools/list.', '  ').map((line) => chalk.gray(line)));
     for (const probe of failedProbes.slice(0, 4)) {
       const server = result.discovery.servers.find((item) => item.id === probe.serverId);
       lines.push(...wrap(`${server?.clientLabel || 'Client'} / ${server?.name || probe.serverId}: ${probe.message || probe.status}`, '  '));
     }
-    if (failedProbes.length > 4) lines.push(chalk.gray(`  + ${failedProbes.length - 4} more in the detailed report`));
+    if (failedProbes.length > 4) lines.push(chalk.gray(`  + ${failedProbes.length - 4} more in the full report`));
   }
 
   lines.push(
-    ...section('Your detailed report'),
-    ...(result.reportPath ? ['', chalk.cyan(reportPath(result.reportPath))] : ['', chalk.gray('No detailed report was saved for this run.')]),
+    ...section('Full local report'),
+    ...(result.reportPath ? ['', chalk.cyan(reportPath(result.reportPath))] : ['', chalk.gray('HTML report disabled for this run.')]),
     '',
-    ...wrap('What this check covered: Slaunt reviewed the actions advertised by connected services. It did not use those actions or read your prompts, files, or credentials.').map((line) => chalk.gray(line)),
-    ...section('Want ongoing protection?'),
+    ...wrap('Scope: configured MCP servers and their declared tools. The audit did not call tools or inspect prompts, file contents, credentials, or tool-use history.').map((line) => chalk.gray(line)),
+    ...section('Optional next step'),
     '',
-    ...wrap('Add approval prompts and give each assistant only the access it needs:'),
+    ...wrap('Add approval policies and role-scoped access so each agent has only the capabilities it needs:'),
     chalk.cyan.underline('https://slaunt.ai/setup'),
   );
 
   if (result.discovery.warnings.length) {
-    lines.push(...section('Other notes'));
+    lines.push(...section('Notes'));
     for (const warning of result.discovery.warnings.slice(0, 3)) lines.push(...wrap(warning, '  ').map((line) => chalk.gray(line)));
     if (result.discovery.warnings.length > 3) lines.push(chalk.gray(`  + ${result.discovery.warnings.length - 3} more in the full report`));
   }
@@ -204,5 +210,5 @@ export function renderAudit(result: AuditResult): string {
 }
 
 export function renderHeader(): string {
-  return `${chalk.bold.hex('#a78bfa')('SLAUNT')} ${chalk.gray('· AI assistant safety check')}\n${chalk.gray('Checks access on this computer · nothing from this check is uploaded')}`;
+  return `${chalk.bold.hex('#a78bfa')('SLAUNT')} ${chalk.gray('· MCP agent access audit')}\n${chalk.gray('Local analysis of configured tool access · no audit data uploaded')}`;
 }

@@ -8,30 +8,30 @@ export interface PlainFinding {
 }
 
 const severityLabels: Record<Severity, string> = {
-  critical: 'Urgent',
-  high: 'High priority',
-  medium: 'Review',
-  low: 'Low priority',
-  info: 'For your information',
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  info: 'Info',
 };
 
 const capabilityLabels: Record<Capability, string> = {
   'read-data': 'Read data',
-  'write-data': 'Change data',
+  'write-data': 'Write data',
   'read-files': 'Read files',
-  'write-files': 'Change files',
+  'write-files': 'Write files',
   'delete-data': 'Delete data',
-  'execute-code': 'Run code',
-  'execute-shell': 'Run commands',
-  'read-secrets': 'Read saved credentials',
-  'manage-auth': 'Manage sign-in',
-  'network-access': 'Connect to the internet',
-  'deploy-production': 'Publish live changes',
+  'execute-code': 'Execute code',
+  'execute-shell': 'Execute shell commands',
+  'read-secrets': 'Read credentials',
+  'manage-auth': 'Manage authentication',
+  'network-access': 'Access the network',
+  'deploy-production': 'Deploy to production',
   'edit-code': 'Edit code',
-  'create-pull-request': 'Propose code changes',
-  'merge-pull-request': 'Approve and merge code',
-  'administer-system': 'Manage system settings',
-  'control-browser': 'Control a browser',
+  'create-pull-request': 'Create pull requests',
+  'merge-pull-request': 'Merge pull requests',
+  'administer-system': 'Administer systems',
+  'control-browser': 'Control browsers',
   'send-message': 'Send messages',
 };
 
@@ -61,9 +61,9 @@ export function plainFinding(item: Finding): PlainFinding {
     const assistant = plainClient(item.clients[0] || 'claude-code');
     return {
       label,
-      title: `${assistant} can publish changes to a live service without approval`,
-      why: 'This could change what customers see before a person has reviewed it.',
-      recommendation: 'Require a person to approve live releases and limit which environments this assistant can change.',
+      title: `${assistant} can deploy to production without an approval boundary`,
+      why: 'The exposed deployment tool can change the live environment before a person reviews the action.',
+      recommendation: 'Require human approval for production deployments and restrict the environments this agent can change.',
     };
   }
 
@@ -71,18 +71,18 @@ export function plainFinding(item: Finding): PlainFinding {
     const assistant = plainClient(item.clients[0] || 'codex');
     return {
       label,
-      title: `${assistant} can combine saved credentials with command access`,
-      why: 'Together, these permissions could expose or misuse passwords, tokens, or other credentials.',
-      recommendation: 'Keep credential access separate from command access, or require approval before either can be used.',
+      title: `${assistant} can chain credential access with shell execution`,
+      why: 'A tool chain could read passwords or tokens and then use them from an operating-system command.',
+      recommendation: 'Separate credential access from shell execution, or require approval at both capability boundaries.',
     };
   }
 
   if (/share broad GitHub permissions/i.test(title)) {
     return {
       label,
-      title: 'Multiple AI assistants share powerful GitHub access',
-      why: 'Shared access makes it harder to control what each assistant can change or to tell which one made a change.',
-      recommendation: 'Give each assistant its own GitHub access, limited to the work it needs to do.',
+      title: 'Claude Code and Codex share broad GitHub permissions',
+      why: 'Shared credentials remove role separation, so either agent can use the same code-changing permissions.',
+      recommendation: 'Give each agent role-scoped GitHub credentials limited to the repositories and actions it needs.',
     };
   }
 
@@ -90,9 +90,9 @@ export function plainFinding(item: Finding): PlainFinding {
     const assistant = plainClient(item.clients[0] || 'codex');
     return {
       label,
-      title: `${assistant} connects to a service without encryption`,
-      why: 'Someone on the network could read or change information sent through this connection.',
-      recommendation: 'Use a secure HTTPS connection with certificate checking before enabling this service.',
+      title: `${assistant} sends MCP traffic over unencrypted HTTP`,
+      why: 'A network observer could read or alter requests and responses sent through this MCP connection.',
+      recommendation: 'Use HTTPS with certificate verification before enabling the MCP server.',
     };
   }
 
@@ -100,9 +100,9 @@ export function plainFinding(item: Finding): PlainFinding {
     const assistant = plainClient(item.clients[0] || 'codex');
     return {
       label,
-      title: `${assistant} has a connection address that cannot be checked safely`,
-      why: 'Slaunt cannot reliably determine where this connection sends information.',
-      recommendation: 'Replace it with a reviewed HTTPS address.',
+      title: `${assistant} has an invalid MCP server URL`,
+      why: 'Slaunt cannot safely determine the network destination from the configured address.',
+      recommendation: 'Replace it with a reviewed HTTPS URL.',
     };
   }
 
@@ -110,33 +110,33 @@ export function plainFinding(item: Finding): PlainFinding {
     const assistant = plainClient(item.clients[0] || 'codex');
     return {
       label,
-      title: `${assistant} stores a credential directly in its settings`,
-      why: 'Other programs, backups, or people with access to this computer may be able to read it.',
-      recommendation: 'Move the credential to a protected environment variable or the operating system credential store.',
+      title: `${assistant} stores credentials directly in an MCP configuration`,
+      why: 'Plaintext configuration values may be readable through local file access, backups, or diagnostic output.',
+      recommendation: 'Reference a protected environment variable or operating-system credential store instead.',
     };
   }
 
   if (/unpinned package at startup/i.test(title)) {
     return {
       label,
-      title: 'A connected service can change when it starts',
-      why: 'It downloads a package without locking it to one reviewed version.',
-      recommendation: 'Lock the package to an exact reviewed version.',
+      title: 'An MCP server can execute an unpinned package at startup',
+      why: 'The package version is not fixed, so different code may run without a configuration change.',
+      recommendation: 'Pin the package to an exact reviewed version and preserve its lockfile or integrity value.',
     };
   }
 
   if (/unclassified tools appear state-changing/i.test(title)) {
     return {
       label,
-      title: 'Some unfamiliar actions may make changes',
-      why: 'Their names suggest they can run jobs, change data, or use administrator access, but Slaunt does not recognize them yet.',
-      recommendation: 'Have a person review these actions before leaving them available to an AI assistant.',
+      title: 'Some unclassified tools appear state-changing',
+      why: 'Their names suggest execution or administrative behavior, but no reviewed classification rule matched them.',
+      recommendation: 'Manually classify these tools before leaving them exposed to an agent.',
     };
   }
 
   return {
     label,
-    title: title.replaceAll('MCP', 'connected').replaceAll('agent', 'AI assistant'),
+    title,
     why: item.why,
     recommendation: item.recommendation,
   };

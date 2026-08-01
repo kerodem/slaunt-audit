@@ -9,7 +9,7 @@ describe('built CLI', () => {
     const { stdout } = await execFileAsync(process.execPath, ['dist/cli.js', '--version'], {
       cwd: process.cwd(), timeout: 10_000,
     });
-    expect(stdout.trim()).toBe('0.1.4');
+    expect(stdout.trim()).toBe('0.1.5');
   });
 
   it('returns a redacted deterministic JSON audit', async () => {

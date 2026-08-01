@@ -1,6 +1,6 @@
 {
   "name": "slaunt",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Privacy-first MCP agent access auditor for Claude and Codex",
   "type": "module",
   "bin": {

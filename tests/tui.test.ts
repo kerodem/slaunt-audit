@@ -8,23 +8,25 @@ describe('terminal report', () => {
     result.reportPath = `${process.cwd()}/slaunt-audit-demo.html`;
     const output = `${renderHeader()}\n${renderAudit(result)}`;
 
-    expect(output).toContain('SLAUNT · AI assistant safety check');
-    expect(output).toContain('Safety check complete');
-    expect(output).toContain('What needs your attention');
-    expect(output).toContain('What each assistant can do');
-    expect(output).toContain('Items Slaunt could not identify (5)');
+    expect(output).toContain('SLAUNT · MCP agent access audit');
+    expect(output).toContain('Audit complete');
+    expect(output).toContain('High-priority findings');
+    expect(output).toContain('Access overview');
+    expect(output).toContain('Unclassified tools (5)');
     expect(output).toContain('Why this matters:');
-    expect(output).toContain('What you can do:');
-    expect(output).toContain('Claude Code can publish changes to a live service without approval');
+    expect(output).toContain('Recommended control:');
+    expect(output).toContain('Claude Code can deploy to production without an approval boundary');
+    expect(output).toContain('Agent client: Claude Code');
+    expect(output).toContain('MCP server: railway');
+    expect(output).toContain('Capability: Trigger production deployments');
+    expect(output).toContain('Agent clients are the AI applications being audited.');
     expect(output).toContain('./slaunt-audit-demo.html');
     expect(output).not.toContain('Why flagged:');
     expect(output).not.toContain('Recommendation:');
-    expect(output).not.toContain('posture');
-    expect(output).not.toContain('sensitive capabilities');
-    expect(output).not.toContain('MCP');
-    expect(output).not.toContain('unclassified');
+    expect(output).toContain('security posture');
+    expect(output).toContain('Capabilities describe what each MCP server allows an agent to do.');
     expect(output).not.toContain('4 unclassified tools appear state-changing');
-    expect(output.split('\n').length).toBeLessThan(75);
+    expect(output.split('\n').length).toBeLessThan(90);
     expect(Math.max(...output.split('\n').map((line) => line.length))).toBeLessThanOrEqual(82);
   });
 
@@ -46,8 +48,8 @@ describe('terminal report', () => {
     };
 
     const output = renderAudit(result);
-    expect(output).toContain('Safety score unavailable · some services could not be fully checked');
-    expect(output).toContain('Some services could not be checked, so this result is incomplete.');
-    expect(output).not.toContain('100/100 safety score · Looks good');
+    expect(output).toContain('Security posture unavailable · tool inventories are incomplete');
+    expect(output).toContain('Missing inventories prevent a complete assessment.');
+    expect(output).not.toContain('100/100 security posture · Strong');
   });
 });

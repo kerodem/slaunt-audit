@@ -28,31 +28,31 @@ interface CliOptions {
   yes: boolean;
 }
 
-const HELP = `Slaunt AI Assistant Safety Check
+const HELP = `Slaunt MCP Agent Access Audit
 
 Usage:
   npx slaunt audit [options]
 
 Options:
-  --install-slaunt          Add Slaunt to the detected AI assistant settings
-  --allow-server-starts     Start local connections to read their permission lists
-  --no-server-starts        Check settings only; do not start local connections
-  --config <path>           Check an additional JSON or TOML settings file (repeatable)
-  --offline                 Use the built-in safety guide; do not download updates
-  --output <path>           Detailed report path
-  --no-report               Do not save the detailed report
-  --open-report             Open the detailed report after the check
+  --install-slaunt          Add the Slaunt MCP server to detected client configurations
+  --allow-server-starts     Start local stdio servers to request tools/list inventories
+  --no-server-starts        Inspect configuration only; do not start local MCP servers
+  --config <path>           Inspect an additional JSON or TOML MCP config (repeatable)
+  --offline                 Use the built-in classification catalog; do not refresh it
+  --output <path>           Full HTML report path
+  --no-report               Do not save the full HTML report
+  --open-report             Open the full HTML report after the audit
   --quick, --no-motion      Skip the guided 1-2 minute inspection sequence
   --timeout <ms>            Per-server probe timeout (1000-60000; default 8000)
-  --json                    Print a machine-readable result with private values removed
-  --yes                     Approve reading permission lists for automation
-  --demo                    Show a repeatable 43-action example check
+  --json                    Print a machine-readable result with secrets redacted
+  --yes                     Approve read-only tools/list startup for automation
+  --demo                    Render a deterministic 43-tool example audit
   -h, --help                Show help
   -v, --version             Show version
 
 Privacy:
-  Slaunt may download its reviewed safety guide. Your connected services,
-  available actions, settings, and results are analyzed here and are not uploaded.
+  Slaunt may download its reviewed classification catalog. Tool definitions,
+  configuration values, and findings are analyzed locally and are not uploaded.
 `;
 
 function valueAfter(args: string[], index: number, option: string): string {
@@ -90,7 +90,7 @@ function parseArguments(args: string[]): CliOptions {
       process.stdout.write(HELP);
       process.exit(0);
     } else if (argument === '--version' || argument === '-v') {
-      process.stdout.write('0.1.4\n');
+      process.stdout.write('0.1.5\n');
       process.exit(0);
     } else if (argument === 'connect') {
       throw new Error('connect is intentionally not implemented in this audit-only release');
@@ -150,12 +150,12 @@ async function main(): Promise<void> {
   if (interactive && options.allowServerStarts === undefined && stdioServers.length > 0 && !options.demo) {
     const dynamicCount = stdioServers.filter(isDynamicLauncher).length;
     allowServerStarts = await confirm({
-      message: `Allow Slaunt to briefly start ${stdioServers.length} local connection${stdioServers.length === 1 ? '' : 's'} so it can read what they allow? It will not use any actions.${dynamicCount ? ` ${dynamicCount} may launch package or container software.` : ''}`,
+      message: `Start ${stdioServers.length} local MCP server${stdioServers.length === 1 ? '' : 's'} to request tools/list (their declared tool inventory)? No tools will be called.${dynamicCount ? ` ${dynamicCount} may launch package or container software.` : ''}`,
       default: true,
     });
   }
 
-  const spinner = options.json ? undefined : ora({ text: 'Finding connected AI tools', color: 'magenta' }).start();
+  const spinner = options.json ? undefined : ora({ text: 'Inspecting MCP configurations', color: 'magenta' }).start();
   const result = await runAudit({
     allowServerStarts: Boolean(allowServerStarts),
     ...(options.customPaths.length ? { customPaths: options.customPaths } : {}),
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
     ...(discovery ? { discovery } : {}),
     onStage: (_stage, detail) => { if (spinner) spinner.text = detail; },
   });
-  spinner?.succeed('Access information collected');
+  spinner?.succeed('MCP evidence collected');
   if (motionEnabled) {
     const elapsedMs = Date.now() - inspectionStartedAt;
     await playAnalysisPath(result, {

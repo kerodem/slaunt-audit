@@ -27,16 +27,16 @@ function sanitizeServer(server: ServerConfig): ServerConfig {
 }
 
 export async function runAudit(options: RunAuditOptions): Promise<AuditResult> {
-  options.onStage?.('discover', 'Looking for Claude and Codex settings on this computer');
+  options.onStage?.('discover', 'Reading Claude and Codex MCP configuration files');
   const discovery = options.demo
     ? demoDiscovery()
     : options.discovery || await discoverConfigurations({ ...(options.customPaths ? { customPaths: options.customPaths } : {}) });
 
-  options.onStage?.('catalog', 'Loading Slaunt\'s reviewed safety guide; your local details stay here');
+  options.onStage?.('catalog', 'Loading the reviewed classification catalog; local tool data stays local');
   const catalog = await loadCatalog({ ...(options.offline || options.demo ? { offline: true } : {}) });
   if (catalog.warning) discovery.warnings.push(`Classification catalog: ${catalog.warning}`);
 
-  options.onStage?.('probe', 'Reading each connected service\'s permission list without using any actions');
+  options.onStage?.('probe', 'Retrieving declared tool inventories without calling any tools');
   const probes = options.demo
     ? demoProbes()
     : await probeServers(discovery.servers, {
@@ -44,10 +44,10 @@ export async function runAudit(options: RunAuditOptions): Promise<AuditResult> {
       ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
     });
 
-  options.onStage?.('classify', 'Matching each action to the kind of access it provides');
+  options.onStage?.('classify', 'Matching each tool to its capabilities and risk level');
   const tools = classifyTools(probes.flatMap((probe) => probe.tools), catalog.rules);
 
-  options.onStage?.('analyze', 'Checking how access can combine across assistants and services');
+  options.onStage?.('analyze', 'Correlating capabilities across agent clients and MCP servers');
   const findings = analyzeRisks(discovery.servers, tools);
   const clientCount = discovery.clients.filter((client) => client.detected).length;
   const serverCount = new Set(discovery.servers.map((server) => server.name.toLowerCase())).size;
