@@ -10,7 +10,7 @@ No account or database configuration is required.
 
 Slaunt discovers local MCP configurations, requests each server's declared tool list, classifies those tools, and identifies risky permissions or combinations. It then writes a private HTML report on your machine.
 
-The audit-only release does not include `slaunt connect`.
+ect`.
 
 ## What the audit checks
 
