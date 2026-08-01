@@ -12,6 +12,7 @@ import { isDynamicLauncher } from './mcp/introspect.js';
 import { writeHtmlReport } from './report/html.js';
 import { DEFAULT_INSPECTION_WINDOW_MS, playAnalysisPath } from './tui/analysis-path.js';
 import { renderAudit, renderHeader } from './tui/render.js';
+import { streamTerminalText } from './tui/stream.js';
 
 interface CliOptions {
   customPaths: string[];
@@ -42,7 +43,7 @@ Options:
   --output <path>           Full HTML report path
   --no-report               Do not save the full HTML report
   --open-report             Open the full HTML report after the audit
-  --quick, --no-motion      Skip the guided 1-2 minute inspection sequence
+  --quick, --no-motion      Skip paced inspection and progressive report reveal
   --timeout <ms>            Per-server probe timeout (1000-60000; default 8000)
   --json                    Print a machine-readable result with secrets redacted
   --yes                     Approve read-only tools/list startup for automation
@@ -90,7 +91,7 @@ function parseArguments(args: string[]): CliOptions {
       process.stdout.write(HELP);
       process.exit(0);
     } else if (argument === '--version' || argument === '-v') {
-      process.stdout.write('0.1.5\n');
+      process.stdout.write('0.1.6\n');
       process.exit(0);
     } else if (argument === 'connect') {
       throw new Error('connect is intentionally not implemented in this audit-only release');
@@ -183,7 +184,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  process.stdout.write(`${renderAudit(result)}\n`);
+  const renderedAudit = `${renderAudit(result)}\n`;
+  if (motionEnabled) await streamTerminalText(renderedAudit);
+  else process.stdout.write(renderedAudit);
   if (options.openReport && result.reportPath) await open(result.reportPath, { wait: false });
 }
 
