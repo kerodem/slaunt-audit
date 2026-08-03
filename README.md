@@ -10,8 +10,6 @@ No account or database configuration is required.
 
 Slaunt discovers local MCP configurations, requests each server's declared tool list, classifies those tools, and identifies risky permissions or combinations. It then writes a private HTML report on your machine.
 
-ect`.
-
 ## What the audit checks
 
 - Claude Code, Claude Desktop, Codex CLI, and Codex Desktop configurations
