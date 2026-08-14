@@ -1,8 +1,8 @@
 # slaunt audit
 
-```bash
-npm install slaunt-audit
-```
+[![npm version](https://shields.io)](https://npmjs.com)
+[![npm downloads](https://shields.io)](https://npmjs.com)
+[![license](https://shields.io)](https://npmjs.com)
 
 
 See what Claude and Codex can do through their configured MCP servers.
