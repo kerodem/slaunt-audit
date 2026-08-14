@@ -1,5 +1,10 @@
 # slaunt audit
 
+```bash
+npm install slaunt-audit
+```
+
+
 See what Claude and Codex can do through their configured MCP servers.
 
 ```sh
