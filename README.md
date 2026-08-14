@@ -1,7 +1,7 @@
 # slaunt audit
 
 [![npm version](https://shields.io)](https://npmjs.com)
-[![npm downloads](https://shields.io)](https://npmjs.com)
+[![npm downloads](https://shields.io)]([https://npmjs.com](https://www.npmjs.com/package/slaunt))
 [![license](https://shields.io)](https://npmjs.com)
 
 
