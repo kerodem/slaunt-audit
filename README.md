@@ -52,6 +52,7 @@ Run `npx slaunt audit --help` for all options. Node.js 20.17 or newer is require
 - Tool names, descriptions, schemas, configuration values, findings, and reports stay local.
 - Slaunt downloads approved classification rules from a read-only Supabase catalog. It does not upload audit data.
 - Starting a configured stdio server requires interactive consent or `--allow-server-starts`.
+- Stdio starts receive configured variables and the MCP SDK's safe defaults; the full parent environment is passed only with explicit `--inherit-parent-env`.
 - Slaunt MCP installation happens only with `--install-slaunt`.
 - The HTML report opens only with `--open-report`.
 - Environment variables and HTTP header values are redacted from JSON and reports.

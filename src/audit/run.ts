@@ -4,6 +4,7 @@ import { loadCatalog } from '../classification/catalog.js';
 import { discoverConfigurations } from '../config/discover.js';
 import { demoDiscovery, demoProbes } from '../demo.js';
 import { probeServers } from '../mcp/introspect.js';
+import { sanitizeCommandArgs } from '../privacy/redaction.js';
 import { analyzeRisks, summarizeAudit } from './risk-engine.js';
 
 export type AuditStage = 'discover' | 'catalog' | 'probe' | 'classify' | 'analyze';
@@ -11,6 +12,7 @@ export type AuditStage = 'discover' | 'catalog' | 'probe' | 'classify' | 'analyz
 export interface RunAuditOptions {
   customPaths?: string[];
   allowServerStarts: boolean;
+  inheritParentEnvironment?: boolean;
   offline?: boolean;
   timeoutMs?: number;
   demo?: boolean;
@@ -21,6 +23,7 @@ export interface RunAuditOptions {
 function sanitizeServer(server: ServerConfig): ServerConfig {
   return {
     ...server,
+    args: sanitizeCommandArgs(server.args),
     env: Object.fromEntries(server.envKeys.map((key) => [key, '[redacted]'])),
     headers: Object.fromEntries(server.headerKeys.map((key) => [key, '[redacted]'])),
   };
@@ -41,6 +44,7 @@ export async function runAudit(options: RunAuditOptions): Promise<AuditResult> {
     ? demoProbes()
     : await probeServers(discovery.servers, {
       allowServerStarts: options.allowServerStarts,
+      ...(options.inheritParentEnvironment ? { inheritParentEnvironment: true } : {}),
       ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
     });
 

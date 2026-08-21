@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isRecursiveSlauntLauncher, probeServers } from '../src/mcp/introspect.js';
+import { isRecursiveSlauntLauncher, probeServers, resolvedEnvironment } from '../src/mcp/introspect.js';
 import type { ServerConfig } from '../src/types.js';
 
 function server(command: string, args: string[]): ServerConfig {
@@ -40,5 +40,34 @@ describe('stdio probe launch safety', () => {
       tools: [],
       message: 'Skipped a Slaunt CLI launcher to prevent a recursive audit',
     });
+  });
+});
+
+describe('stdio environment boundary', () => {
+  it('passes configured variables without inheriting unrelated parent variables', () => {
+    const name = 'SLAUNT_AUDIT_TEST_PARENT_SECRET';
+    const previous = process.env[name];
+    process.env[name] = 'parent-secret-value';
+    try {
+      expect(resolvedEnvironment({ MCP_MODE: 'audit' })).toEqual({ MCP_MODE: 'audit' });
+    } finally {
+      if (previous === undefined) delete process.env[name];
+      else process.env[name] = previous;
+    }
+  });
+
+  it('supports explicit full parent-environment inheritance', () => {
+    const name = 'SLAUNT_AUDIT_TEST_PARENT_SECRET';
+    const previous = process.env[name];
+    process.env[name] = 'parent-secret-value';
+    try {
+      expect(resolvedEnvironment({ MCP_MODE: 'audit' }, true)).toMatchObject({
+        MCP_MODE: 'audit',
+        [name]: 'parent-secret-value',
+      });
+    } finally {
+      if (previous === undefined) delete process.env[name];
+      else process.env[name] = previous;
+    }
   });
 });
