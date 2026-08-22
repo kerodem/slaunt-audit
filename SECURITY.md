@@ -20,6 +20,7 @@ The auditor promises that:
 - stdio MCP processes start only with explicit consent;
 - client config changes occur only with explicit consent and a backup;
 - config values are redacted from JSON and HTML output;
+- stdio starts do not inherit the full parent environment unless `--inherit-parent-env` is explicitly selected;
 - remote endpoints must be HTTPS unless they are loopback development addresses;
 - redirects are rejected for catalog and MCP HTTP requests;
 - public Supabase credentials are read-only and RLS-constrained.

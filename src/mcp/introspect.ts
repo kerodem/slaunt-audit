@@ -5,7 +5,11 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { DeclaredTool, ServerConfig, ServerProbe } from '../types.js';
 
-function resolvedEnvironment(configured: Record<string, string>): Record<string, string> {
+export function resolvedEnvironment(
+  configured: Record<string, string>,
+  inheritParentEnvironment = false,
+): Record<string, string> {
+  if (!inheritParentEnvironment) return { ...configured };
   const inherited = Object.fromEntries(
     Object.entries(process.env).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
   );
@@ -86,7 +90,12 @@ async function withTimeout<T>(operation: Promise<T>, milliseconds: number, onTim
   }
 }
 
-async function probeServer(server: ServerConfig, allowServerStarts: boolean, timeoutMs: number): Promise<ServerProbe> {
+async function probeServer(
+  server: ServerConfig,
+  allowServerStarts: boolean,
+  timeoutMs: number,
+  inheritParentEnvironment: boolean,
+): Promise<ServerProbe> {
   if (server.transport === 'stdio') {
     if (isRecursiveSlauntLauncher(server)) {
       return {
@@ -104,7 +113,7 @@ async function probeServer(server: ServerConfig, allowServerStarts: boolean, tim
       const transport = new StdioClientTransport({
         command: expandEnvironment(server.command),
         args: server.args.map(expandEnvironment),
-        env: resolvedEnvironment(server.env),
+        env: resolvedEnvironment(server.env, inheritParentEnvironment),
         stderr: 'pipe',
       });
       const tools = await withTimeout(connectAndList(server, transport), timeoutMs, () => transport.close());
@@ -162,6 +171,7 @@ async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper:
 
 export interface ProbeOptions {
   allowServerStarts: boolean;
+  inheritParentEnvironment?: boolean;
   timeoutMs?: number;
   concurrency?: number;
 }
@@ -170,7 +180,12 @@ export async function probeServers(servers: ServerConfig[], options: ProbeOption
   return mapWithConcurrency(
     servers,
     options.concurrency || 4,
-    (server) => probeServer(server, options.allowServerStarts, options.timeoutMs || 8_000),
+    (server) => probeServer(
+      server,
+      options.allowServerStarts,
+      options.timeoutMs || 8_000,
+      options.inheritParentEnvironment === true,
+    ),
   );
 }
 

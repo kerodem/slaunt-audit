@@ -17,7 +17,13 @@ describe('privacy boundary and report', () => {
       servers: [{
         id: 'secret-server', client: 'claude-code', clientLabel: 'Claude Code', name: 'private',
         transport: 'unknown', sourcePath: '/tmp/.claude.json', scope: 'user', command: 'private-mcp',
-        args: [], env: { API_TOKEN: 'super-secret-value' }, envKeys: ['API_TOKEN'],
+        args: [
+          '--token', 'super-secret-value',
+          '--password=another-secret',
+          'API_SECRET=inline-secret',
+          '--mode', 'read-only',
+        ],
+        env: { API_TOKEN: 'super-secret-value' }, envKeys: ['API_TOKEN'],
         headers: { Authorization: 'Bearer super-secret-value' }, headerKeys: ['Authorization'], enabled: true,
       }],
       warnings: [],
@@ -27,6 +33,12 @@ describe('privacy boundary and report', () => {
     expect(serialized).not.toContain('super-secret-value');
     expect(result.discovery.servers[0]!.env.API_TOKEN).toBe('[redacted]');
     expect(result.discovery.servers[0]!.headers.Authorization).toBe('[redacted]');
+    expect(result.discovery.servers[0]!.args).toEqual([
+      '--token', '[redacted]',
+      '--password=[redacted]',
+      'API_SECRET=[redacted]',
+      '--mode', 'read-only',
+    ]);
     expect(result.privacy.uploadedAuditData).toBe(false);
   });
 
