@@ -16,10 +16,24 @@ export function resolvedEnvironment(
   return { ...inherited, ...configured };
 }
 
-function expandEnvironment(value: string): string {
+const SENSITIVE_ENV_NAME = /(?:TOKEN|SECRET|KEY|PASSWORD|PASSWD|PRIVATE|CREDENTIAL|COOKIE|SESSION|AUTH|JWT|DATABASE_URL|CONNECTION_STRING)/i;
+
+export function expandEnvironment(value: string, allowSensitiveEnvironment = false): string {
   return value.replace(/\$\{([A-Z_][A-Z0-9_]*)(?::-([^}]*))?\}/gi, (_match, name: string, fallback?: string) => {
+    if (SENSITIVE_ENV_NAME.test(name) && !allowSensitiveEnvironment) {
+      throw new Error(`Sensitive environment expansion for ${name} is disabled; pass --allow-sensitive-env only for a trusted local probe`);
+    }
     return process.env[name] ?? fallback ?? '';
   });
+}
+
+function expandConfiguredEnvironment(
+  configured: Record<string, string>,
+  allowSensitiveEnvironment: boolean,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(configured).map(([name, value]) => [name, expandEnvironment(value, allowSensitiveEnvironment)]),
+  );
 }
 
 function redactedError(error: unknown, server: ServerConfig): string {
@@ -95,6 +109,7 @@ async function probeServer(
   allowServerStarts: boolean,
   timeoutMs: number,
   inheritParentEnvironment: boolean,
+  allowSensitiveEnvironment: boolean,
 ): Promise<ServerProbe> {
   if (server.transport === 'stdio') {
     if (isRecursiveSlauntLauncher(server)) {
@@ -111,9 +126,12 @@ async function probeServer(
     if (!server.command) return { serverId: server.id, status: 'failed', tools: [], message: 'Missing stdio command' };
     try {
       const transport = new StdioClientTransport({
-        command: expandEnvironment(server.command),
-        args: server.args.map(expandEnvironment),
-        env: resolvedEnvironment(server.env, inheritParentEnvironment),
+        command: expandEnvironment(server.command, allowSensitiveEnvironment),
+        args: server.args.map((argument) => expandEnvironment(argument, allowSensitiveEnvironment)),
+        env: resolvedEnvironment(
+          expandConfiguredEnvironment(server.env, allowSensitiveEnvironment),
+          inheritParentEnvironment,
+        ),
         stderr: 'pipe',
       });
       const tools = await withTimeout(connectAndList(server, transport), timeoutMs, () => transport.close());
@@ -125,9 +143,12 @@ async function probeServer(
 
   if ((server.transport === 'http' || server.transport === 'sse') && server.url) {
     try {
-      const endpoint = new URL(expandEnvironment(server.url));
+      // HTTP/SSE probes may reach an untrusted remote server. Never expand
+      // token/key/secret variables into a URL or header, even when a caller
+      // explicitly allows sensitive values for a local stdio launch.
+      const endpoint = new URL(expandEnvironment(server.url, false));
       const headers = Object.fromEntries(
-        Object.entries(server.headers).map(([name, value]) => [name, expandEnvironment(value)]),
+        Object.entries(server.headers).map(([name, value]) => [name, expandEnvironment(value, false)]),
       );
       const requestInit = { headers, redirect: 'error' as const };
       if (server.transport === 'sse') {
@@ -172,6 +193,7 @@ async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper:
 export interface ProbeOptions {
   allowServerStarts: boolean;
   inheritParentEnvironment?: boolean;
+  allowSensitiveEnvironment?: boolean;
   timeoutMs?: number;
   concurrency?: number;
 }
@@ -185,6 +207,7 @@ export async function probeServers(servers: ServerConfig[], options: ProbeOption
       options.allowServerStarts,
       options.timeoutMs || 8_000,
       options.inheritParentEnvironment === true,
+      options.allowSensitiveEnvironment === true,
     ),
   );
 }

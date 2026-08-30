@@ -23,6 +23,7 @@ interface CliOptions {
   noMotion: boolean;
   noReport: boolean;
   inheritParentEnvironment: boolean;
+  allowSensitiveEnvironment: boolean;
   output?: string;
   timeoutMs?: number;
   installSlaunt?: boolean;
@@ -39,6 +40,7 @@ Options:
   --install-slaunt          Add the Slaunt MCP server to detected client configurations
   --allow-server-starts     Start local stdio servers to request tools/list inventories
   --inherit-parent-env      Explicitly pass the full parent environment to approved stdio starts
+  --allow-sensitive-env     Permit token/key/secret variable expansion during trusted local probes
   --no-server-starts        Inspect configuration only; do not start local MCP servers
   --config <path>           Inspect an additional JSON or TOML MCP config (repeatable)
   --offline                 Use the built-in classification catalog; do not refresh it
@@ -67,7 +69,7 @@ function valueAfter(args: string[], index: number, option: string): string {
 function parseArguments(args: string[]): CliOptions {
   const options: CliOptions = {
     customPaths: [], demo: false, json: false, offline: false, openReport: false, noMotion: false, noReport: false,
-    inheritParentEnvironment: false, yes: false,
+    inheritParentEnvironment: false, allowSensitiveEnvironment: false, yes: false,
   };
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
@@ -85,6 +87,7 @@ function parseArguments(args: string[]): CliOptions {
     else if (argument === '--allow-server-starts') options.allowServerStarts = true;
     else if (argument === '--no-server-starts') options.allowServerStarts = false;
     else if (argument === '--inherit-parent-env') options.inheritParentEnvironment = true;
+    else if (argument === '--allow-sensitive-env') options.allowSensitiveEnvironment = true;
     else if (argument === '--config') options.customPaths.push(valueAfter(args, index++, argument));
     else if (argument === '--output') options.output = valueAfter(args, index++, argument);
     else if (argument === '--timeout') {
@@ -164,6 +167,7 @@ async function main(): Promise<void> {
   const result = await runAudit({
     allowServerStarts: Boolean(allowServerStarts),
     ...(options.inheritParentEnvironment ? { inheritParentEnvironment: true } : {}),
+    ...(options.allowSensitiveEnvironment ? { allowSensitiveEnvironment: true } : {}),
     ...(options.customPaths.length ? { customPaths: options.customPaths } : {}),
     ...(options.offline ? { offline: true } : {}),
     ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
