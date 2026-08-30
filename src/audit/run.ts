@@ -13,6 +13,7 @@ export interface RunAuditOptions {
   customPaths?: string[];
   allowServerStarts: boolean;
   inheritParentEnvironment?: boolean;
+  allowSensitiveEnvironment?: boolean;
   offline?: boolean;
   timeoutMs?: number;
   demo?: boolean;
@@ -45,6 +46,7 @@ export async function runAudit(options: RunAuditOptions): Promise<AuditResult> {
     : await probeServers(discovery.servers, {
       allowServerStarts: options.allowServerStarts,
       ...(options.inheritParentEnvironment ? { inheritParentEnvironment: true } : {}),
+      ...(options.allowSensitiveEnvironment ? { allowSensitiveEnvironment: true } : {}),
       ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
     });
 

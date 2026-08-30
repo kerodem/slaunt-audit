@@ -67,8 +67,9 @@ function normalizeServers(
     };
     const envHeaderNames = stringRecord(value.env_http_headers);
     for (const [header, envName] of Object.entries(envHeaderNames)) {
-      const resolved = process.env[envName];
-      if (resolved) headers[header] = resolved;
+      // Keep the reference symbolic until probing. Resolving it during
+      // discovery would put the raw secret in the discovery object.
+      headers[header] = `\${${envName}}`;
     }
 
     const url = typeof value.url === 'string' ? value.url : undefined;
